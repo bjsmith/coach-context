@@ -1,4 +1,6 @@
-delivercbt_files/*
+delivercbt_files/config.yml
+delivercbt_files/notes*
+delivercbt_files/snapshot*
 ngrok
 .DS_Store
 __pycache__/
