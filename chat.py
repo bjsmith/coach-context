@@ -15,7 +15,6 @@ class ChatConfig:
 
         if force_reload or ChatConfig.config is None:
             is_prod = os.environ.get('IS_HEROKU', None)
-            is_prod = True
             if is_prod:
                 print("loading config from heroku")
                 #get all keys in the environment with os.environ
