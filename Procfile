@@ -1,0 +1,1 @@
+web: python telegram_minimal_example.py
