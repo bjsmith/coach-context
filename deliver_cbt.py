@@ -12,7 +12,7 @@ import numpy as np
 import openai
 import time
 
-from chat import CBTTerminal, ChatConfig, CBTIOInterface
+from chat import CBTTerminal, ChatConfig, CBTIOInterface, AsyncCBTIOInterface
 
 class CBTSession:
     """
@@ -98,6 +98,21 @@ class CBTSession:
         if ts is None:
             ts = float(time.time())
         self.last_message_ts = ts
+
+    async def handle_message_async(self,message,ts):
+        self.therapist.listen_to_client(message)
+        self.frontend.indicate_response_coming()
+        response = self.therapist.respond()
+        await self.frontend.send_message(message= response, channel_id=self.channel_id)
+        
+        #self.set_last_message_ts()
+        #now we are going to archive the session
+        #this is different to saving notes
+        #we archive a full copy of the session
+        #that way if the session is ended abruptly,
+        #we can write notes in the next session
+        #then load the notes
+        self.take_session_snapshot()
 
 
     def handle_message(self,message,ts):

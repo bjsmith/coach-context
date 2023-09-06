@@ -14,8 +14,8 @@ class ChatConfig:
     def get_config(force_reload=False):
 
         if force_reload or ChatConfig.config is None:
-            is_prod = os.environ.get('IS_HEROKU', None)
-            if is_prod:
+            is_prod = os.environ.get('IS_HEROKU', None)=='True'
+            if is_prod==True:
                 print("loading config from heroku")
                 #get all keys in the environment with os.environ
                 all_environ = dict(os.environ)
@@ -46,6 +46,20 @@ class CBTIOInterface:
     
     def indicate_response_coming(self):
         raise NotImplementedError
+
+class AsyncCBTIOInterface:
+    """
+    creates a mode-agnostic pattern for the therapist to use to communicate with the client
+    """
+    def __init__(self):
+        raise NotImplementedError
+
+    async def send_message(self):
+        raise NotImplementedError
+    
+    def indicate_response_coming(self):
+        raise NotImplementedError
+
 
 class CBTTerminal(CBTIOInterface):
     """

@@ -7,140 +7,118 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import time
-from session import SessionManager
+from session import AsyncSessionManager
 
+# import logging
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from telegram.ext import MessageHandler, filters
 
-WHERE WE'RE AT:
+# OK SO this is not going to work
+# because we've designed it asynchronusly
+# it's not compatible with running SessionManager
+# which is designed to be synchronous
+# we'd have to rewrite SessionManager to be async
+# I don't know how to do that
+# possibly we can use the deliver_cbt, but we can't use the SessionManager as it is.
 
-- GOING HALF-WAY THROUGH THE RECEIVING function
-- JUST NEEDS SOME SMALL THINGS SET UP IN THERE
-- THE MAIN ISSUE IS THAT I'M NOT SURE THE MESSSAGES ARE COMING THROUGH RELIABLY, AND THIS MAY BE A PROBLEM WITH THE WEBHOOK
-- THE BLOODY WEBHOOK. PERHAPS I NEED TO USER ASYNC RATEHR THAN TRYING TO GET THIS TO WORK SYNCHRONOUSLY.
-- ONE REASON I HAVEN'T IS BECAUSE THE BACKEND MIGHT NOT BE SET UP FOR ASYNC PROPERLY.
-
-
-Possible routes through:
-
- - start from scratch, using requests and Flask
-- start from scratch, using telegram for webhook, Flask, and still no async, but get the webhook right first.
- - start from scratch, using telegram and aysnc if neccessary
 
 class TelegramConnectorApp:
 
 
     def __init__(self):
-        self.app = Flask(__name__)
-        self.telegram_url = 'https://api.telegram.org/bot' + ChatConfig.get_config()['telegrambottoken'] + '/'
-        self.client = telegram.Bot(token=ChatConfig.get_config()['telegrambottoken'])
+        # logging.basicConfig(
+        # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        # level=logging.INFO
+        # )
         
-        self.register_routes()
+        telegram_token = ChatConfig.get_config()['telegrambottoken']
+        application = ApplicationBuilder().token(telegram_token).build()
+        # self.client = telegram.Bot(token=ChatConfig.get_config()['telegrambottoken'])
+
+        #start_handler = CommandHandler('start', self.start)
+        
+
+        #application.add_handler(start_handler)
+        
+
+        self.app = application
+
+        
+        self.register_handlers()
         self.io = TelegramIO(self.send_message)
-        self.session_manager = SessionManager(self.io)
+        self.session_manager = AsyncSessionManager(self.io)
         self.events_cache = []
         pass
 
     def run(self, *args, **kwargs):
+        self.app.run_polling()
+        # self.set_webhook()
+        # self.app.run(*args, **kwargs)
+
+    def register_handlers(self):
+        msg_received_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), self.handle_msg)
+        self.app.add_handler(msg_received_handler)
         
-        self.set_webhook()
-        self.app.run(*args, **kwargs)
 
-    def register_routes(self):
-        token = ChatConfig.get_config()['telegrambottoken']
-        #self.app.route("/", methods=['POST','GET'])(self.handle_events)
-        # self.app.route("/")(self.hello)
-        # # self.app.route("/url_verification")(self.slack_url_verify)
-        # self.app.route("/events", methods=["POST"])(self.handle_events)
-        self.app.route("/{}".format(token), methods=["POST"])(self.handle_events)
-        self.app.route("/setwebhook", methods=["GET","POST"])(self.set_webhook)
-        #self.app.route("/slack/events", methods=["POST"])(self.handle_event)
-
-    #@app.route('/setwebhook', methods=['GET', 'POST'])
-    def set_webhook(self):
-        # we use the bot object to link the bot to our app which live
-        # in the link provided by URL
-        token = ChatConfig.get_config()['telegrambottoken']
-        webhook_url = '{URL}{HOOK}'.format(
-            URL=ChatConfig.get_config()['telegram_bot_url'],
-            HOOK=token
-        )
-        
-        url = self.telegram_url + 'setWebhook?url=' + webhook_url
-        res = requests.get(url)
-        return 'Webhook set'
-
-    def send_message(self, channel_id, text):
+    async def send_message(self, channel_id, text):
         try:
             # Send a message using the Slack WebClient
-            url = self.telegram_url + f'sendMessage?chat_id={channel_id}&text={message}'
-            requests.get(url)
+            #context.bot.send_message(chat_id=update.effective_chat.id, text="alt-echo: " + update.message.text)
             #print(f"Message sent: {response['ts']} - {text}")
+            await self.app.bot.send_message(chat_id=channel_id, text=text)
             print(f"Message sent: {text}")
         except Exception as e:
             # In case of errors, print the error message
             print(f"Error sending message: {e}")
         
     
-    def handle_events(self):
-        
-        # if request.json['type']=='url_verification':
-        #     return request.json['challenge']
+    async def handle_msg(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        message = update.message
+        #self.app.bot.send_message(chat_id=user_id, text="hello world")
 
         print("call to handle_events URL occured")
-        payload = request.json
-        event_id = payload['update_id']
+        # payload = request.json
+        # event_id = payload['update_id']
 
 
 
 
+            # #this is a message from a user
+            # message = payload['message']
+
+            # if message['from']['is_bot']:
+            #     print('bot message')
+            #     return jsonify({'status': 'ok'})
+
+        #message = {}
+        #current_ts =0
+        text = message['text']
+        user_id = update.effective_user.id
+
+        channel_id = user_id # this is different in slack, but just using the username here.
+        ts = message['date'].timestamp()
+        print("receiving message from user " + str(user_id) + " (" + str(ts) + "): " + text)
+
+        #temporary measure to avoid processing bounced events
+        #this can occur during debugging.
+        # if ts<float(current_ts-30):
+        #     print('ignoring old event')
+        #     return jsonify({'status': 'ok'})
 
 
+        # user_id = event.get("user_id")
+        # message = event.get("message")
+        await self.session_manager.handle_incoming_message(channel_id, user_id, text, ts=ts)
+        #self.send_response_to_slack(response)
 
-        #track the events; if we already got this event, ignore
-        #might want to just use update_id for this.
-        self.events_cache = [event_id] + self.events_cache[:99999]
-        if event_id in self.events_cache[1:]:
-            print('ignoring duplicate event')
-            return jsonify({'status': 'ok'})
         
-        #get current unix timestamp
-        current_ts = int(time.time())
-
-        if 'message' in payload:
-
-            #this is a message from a user
-            message = payload['message']
-
-            if message['from']['is_bot']:
-                print('bot message')
-                return jsonify({'status': 'ok'})
+        #self.send_message(channel_id, f"Received your direct message: {text}")
+        print(' received a message from a user ({user_id}) {text}')
+        #self.send_message(channel_id, f"response")
 
 
-            text = message['text']
-            user_id = message['from']['id']
-
-            channel_id = user_id # this is different in slack, but just using the username here.
-            ts = message['date']
-            print("receiving message from user " + str(user_id) + " (" + str(ts) + "): " + text)
-
-            #temporary measure to avoid processing bounced events
-            #this can occur during debugging.
-            if ts<float(current_ts-30):
-                print('ignoring old event')
-                return jsonify({'status': 'ok'})
-
-
-            # user_id = event.get("user_id")
-            # message = event.get("message")
-            self.session_manager.handle_incoming_message(channel_id, user_id, text, ts=ts)
-            #self.send_response_to_slack(response)
-
-            
-            #self.send_message(channel_id, f"Received your direct message: {text}")
-            print(' received a message from a user ({user_id}) {text}')
-            #self.send_message(channel_id, f"response")
-
-
-        return jsonify({'status': 'ok'})
+        #return jsonify({'status': 'ok'})
 
 
 class TelegramIO(CBTIOInterface):
@@ -151,13 +129,15 @@ class TelegramIO(CBTIOInterface):
         self.send_message_callback = send_message_callback
         pass
 
-    def send_message(self, message, channel_id):
-        self.send_message_callback(channel_id, message)
+    async def send_message(self, message, channel_id):
+        await self.send_message_callback(channel_id, message)
 
     def indicate_response_coming(self):
         pass
 
 if __name__ == '__main__':
-    my_flask_app =TelegramConnectorApp()
-    my_flask_app.run(debug=True, port=3001)
+    # my_flask_app =TelegramConnectorApp()
+    # my_flask_app.run(debug=True, port=3001)
+    tca = TelegramConnectorApp()
+    tca.run()
     
