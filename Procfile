@@ -1,1 +1,1 @@
-web: python telegram_minimal_example.py
+web: zsh heroku_run.sh

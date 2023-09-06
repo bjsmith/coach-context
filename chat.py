@@ -5,6 +5,7 @@ from yaml.loader import SafeLoader
 from socket import gethostname # do better
 #from flask import Flask
 from slack_bolt import App
+import os
 
 class ChatConfig:
 
@@ -13,6 +14,18 @@ class ChatConfig:
     def get_config(force_reload=False):
 
         if force_reload or ChatConfig.config is None:
+            is_prod = os.environ.get('IS_HEROKU', None)
+            is_prod = True
+            if is_prod:
+                print("loading config from heroku")
+                #get all keys in the environment with os.environ
+                all_environ = dict(os.environ)
+                #now get the keys that start with "COACHCONTEXT_"
+                coachcontext_environ = {k.replace("COACHCONTEXT_",""):v for k,v in all_environ.items() if k.startswith("COACHCONTEXT_")}
+                ChatConfig.config = coachcontext_environ
+                return ChatConfig.config
+
+
             with open('delivercbt_files/config.yml') as f:
                     all_yaml = yaml.load(f, Loader=SafeLoader)
                     if gethostname() in all_yaml.keys():

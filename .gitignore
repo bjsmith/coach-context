@@ -3,3 +3,5 @@ ngrok
 .DS_Store
 __pycache__/
 setup_server.sh
+.vscode/
+.vscode/*

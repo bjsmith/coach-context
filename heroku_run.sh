@@ -1,0 +1,1 @@
+heroku config:set IS_HEROKU=True
