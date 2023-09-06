@@ -53,9 +53,12 @@ class AsyncSessionManager:
 
         
 
-    def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CBTSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message)#, therapist)
+    async def create_session(self, channel_id, user_id, first_message=None):#, therapist):
+        session = CBTSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True)#, therapist)
+        #for the async version, we need to do a distinct to send out the introductory message
         self.sessions[user_id] = session
+        await session.respond_to_session_opening_async()
+        
         return session
 
     def get_session(self, user_id):
@@ -72,15 +75,18 @@ class AsyncSessionManager:
 
         if not session:
             #therapist = CBTTherapist()
-            session = self.create_session(channel_id, user_id, first_message=message)
+            session = await self.create_session(channel_id, user_id, first_message=message)
             #response = ""
-        #else:
-        if float(ts) - session.last_message_ts > timeout:
-            self.close_session(user_id)
-            #try again with a new session
-            await self.handle_incoming_message(channel_id, user_id, message, ts)
+            
+             
+        else:
+            if float(ts) - session.last_message_ts > timeout:
+                self.close_session(user_id)
+                #try again with a new session
+                await self.handle_incoming_message(channel_id, user_id, message, ts)
+                return()
 
-        await session.handle_message_async(message, ts=ts)
+            await session.handle_message_async(message, ts=ts)
             
         if session.is_ended:
             self.close_session(user_id)

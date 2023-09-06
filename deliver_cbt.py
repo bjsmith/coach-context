@@ -18,7 +18,7 @@ class CBTSession:
     """
     manages the connections and the overall session
     """
-    def __init__(self, frontend: CBTIOInterface, channel_id, user_id, first_message=None):
+    def __init__(self, frontend: CBTIOInterface, channel_id, user_id, first_message=None, is_async=False):
         #self.session_id = session_id
         self.channel_id = channel_id
         self.user_id = user_id
@@ -29,6 +29,7 @@ class CBTSession:
         self.is_ended= False
         self.interview_count = None
         self.last_message_ts = None
+        self.is_async = is_async
 
         self.therapist = CBTTherapist(
             user_id,
@@ -63,15 +64,16 @@ class CBTSession:
         if first_message is not None:
             self.therapist.listen_to_client(first_message)
 
-        #this therapist doesn't introduce themselves
-        #because the client is already in the channel and has already said something
-        # so the first message from the therapist should be the response to the client's message
-        # combined with an appropriate introduction.
-        introductory_text = self.therapist.introduce_self()
-        self.frontend.send_message(introductory_text, channel_id=self.channel_id)
-        response = self.therapist.respond()
-        self.frontend.send_message(message= response, channel_id=self.channel_id)
-        self.set_last_message_ts()
+        if not self.is_async:
+            #this therapist doesn't introduce themselves
+            #because the client is already in the channel and has already said something
+            # so the first message from the therapist should be the response to the client's message
+            # combined with an appropriate introduction.
+            introductory_text = self.therapist.introduce_self()
+            self.frontend.send_message(introductory_text, channel_id=self.channel_id)
+            response = self.therapist.respond()
+            self.frontend.send_message(message= response, channel_id=self.channel_id)
+            self.set_last_message_ts()
 
     def end_session(self):
         self.is_ended = True
@@ -80,10 +82,6 @@ class CBTSession:
         #session is ending properly, we don't need to load the snapshot
         os.remove(self.snapshot_filepath)
         return(None)
-
-
-
-
 
         
     def initialize_openai_api_connection(self):
@@ -98,6 +96,14 @@ class CBTSession:
         if ts is None:
             ts = float(time.time())
         self.last_message_ts = ts
+
+    async def respond_to_session_opening_async(self):
+        introductory_text = self.therapist.introduce_self()
+        await self.frontend.send_message(introductory_text, channel_id=self.channel_id)
+        response = self.therapist.respond()
+        await self.frontend.send_message(message= response, channel_id=self.channel_id)
+        self.set_last_message_ts()
+
 
     async def handle_message_async(self,message,ts):
         self.therapist.listen_to_client(message)
