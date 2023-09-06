@@ -1,2 +1,2 @@
-conda env export > environment.yml
-pip freeze > requirements.txt
+conda env export | grep -v "^prefix: " > environment.yml
+pip list --format=freeze > requirements.txt
