@@ -1,1 +1,1 @@
-worker: python telegram_minimal_example.py
+worker: python telegram_connector_app.py
