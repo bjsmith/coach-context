@@ -34,7 +34,7 @@ class ChatConfig:
         
         return ChatConfig.config
 
-class CBTIOInterface:
+class CoachingIOInterface:
     """
     creates a mode-agnostic pattern for the therapist to use to communicate with the client
     """
@@ -47,7 +47,7 @@ class CBTIOInterface:
     def indicate_response_coming(self):
         raise NotImplementedError
 
-class AsyncCBTIOInterface:
+class AsyncCoachingIOInterface:
     """
     creates a mode-agnostic pattern for the therapist to use to communicate with the client
     """
@@ -61,7 +61,7 @@ class AsyncCBTIOInterface:
         raise NotImplementedError
 
 
-class CBTTerminal(CBTIOInterface):
+class CBTTerminal(CoachingIOInterface):
     """
     manages input and output with the client.
     """

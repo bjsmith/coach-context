@@ -12,17 +12,18 @@ import numpy as np
 import openai
 import time
 
-from chat import CBTTerminal, ChatConfig, CBTIOInterface, AsyncCBTIOInterface
+from chat import CBTTerminal, ChatConfig, CoachingIOInterface, AsyncCoachingIOInterface
 
-class CBTSession:
+class CoachingSession:
     """
     manages the connections and the overall session
     """
-    def __init__(self, frontend: CBTIOInterface, channel_id, user_id, first_message=None, is_async=False):
+    def __init__(self, frontend: CoachingIOInterface, channel_id, user_id, first_message=None, is_async=False):
         #self.session_id = session_id
         self.channel_id = channel_id
         self.user_id = user_id
         self.notes = []
+        
         self.notes_filepath = "delivercbt_files/notes_" + str(self.user_id) + ".txt"
         self.snapshot_filepath = "delivercbt_files/snapshot_" + str(self.user_id) + ".json"
         self.frontend = frontend
@@ -31,7 +32,7 @@ class CBTSession:
         self.last_message_ts = None
         self.is_async = is_async
 
-        self.therapist = CBTTherapist(
+        self.therapist = EABTTherapist(
             user_id,
             get_ai_response_func=self.get_chatcompletion_response#,
             #send_message_func=self.frontend.send_message
@@ -64,7 +65,7 @@ class CBTSession:
         if first_message is not None:
             self.therapist.listen_to_client(first_message)
 
-        if not self.is_async:
+        if not self.is_async: #for asynchronous sessions, this is dealt with in its own async function
             #this therapist doesn't introduce themselves
             #because the client is already in the channel and has already said something
             # so the first message from the therapist should be the response to the client's message
@@ -209,7 +210,7 @@ class CBTSession:
         return text_response
     
     def get_instructions(self):
-        instructions_filepath = "delivercbt_files/alt_prompt.txt"
+        instructions_filepath = "delivercbt_files/" + self.therapist.instruction_set_name +".txt"
         with open(instructions_filepath, 'r') as f:
             instructions = f.read()
         return(instructions)
@@ -260,11 +261,8 @@ class CBTSession:
         self.save_notes(notes_filepath)
 
 
-    
 
-    
-
-class CBTTherapist:
+class Therapist:
     """"
     manages the therapist's notes and the conversation
     """
@@ -277,6 +275,10 @@ class CBTTherapist:
         self.get_ai_response = get_ai_response_func
         self.notes = ""
         self.reminder_buffer = []
+        self.instruction_set_name = 'alt_prompt'
+
+        self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using cognitive behavioral therapy. I am not equipped to talk with you about other psychological issues but we can talk about overcoming your fears. Please be aware a summary of this conversation will be recorded for training purposes."
+
         
         pass
 
@@ -287,7 +289,7 @@ class CBTTherapist:
 
     def self_monitor(self, therapist_talk):
         """
-        this funciton is designed to monitor what the therapist is saying.
+        this function is designed to monitor what the therapist is saying.
         If it needs to be corrected, it is designed to correct the therapist.
         """
         #count the number of words in "therapist_talk"
@@ -301,7 +303,7 @@ class CBTTherapist:
 
     def introduce_self(self):
                 # this should be stored externally but this is a quick and dirty way to do it
-        introduction = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using cognitive behavioral therapy. I am not equipped to talk with you about other psychological issues but we can talk about overcoming your fears. Please be aware a summary of this conversation will be recorded for training purposes."
+        introduction = self.intro_text
 
         #if client has already said something, then we need to respond to that first.
         if np.any([m['role']=="user" for m in self.messages]):
@@ -369,14 +371,33 @@ class CBTTherapist:
 
         
 
+class CBTTherapist(Therapist):
+    
+    def __init(self, session_id, get_ai_response_func):
+        super().__init__(session_id, get_ai_response_func)
+        pass
+
+
+class EABTTherapist(Therapist):
+
+    def __init(self, session_id, get_ai_response_func):
+        super().__init__(session_id, get_ai_response_func)
+
+        self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using emotional attachment behavioral therapy (EABT). I am not equipped to talk with you about other psychological issues but we can practice AEBT, particulalry in an a context of helping you address addictions and unhealthy or undesired habits. Please be aware a summary of this conversation will be recorded for training purposes."
+        self.instruction_set_name = 'eabt_prompt'
+        pass
 
 
 
 print("loading")
 
 
+
+    
+
+
 #start a session if this is the main file
 if __name__ == "__main__":
-    session = CBTSession(1)
+    session = CoachingSession(1)
     session.run()
     

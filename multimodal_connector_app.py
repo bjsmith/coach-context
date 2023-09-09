@@ -1,7 +1,7 @@
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from chat import ChatConfig, CBTIOInterface
+from chat import ChatConfig, CoachingIOInterface
 from flask import Flask, request, jsonify
 import telegram
 import os
@@ -108,7 +108,7 @@ class MultimodalConnectorApp:
         return jsonify({'status': 'ok'})
 
 
-class SlackIO(CBTIOInterface):
+class SlackIO(CoachingIOInterface):
     """
     creates a mode-agnostic pattern for the therapist to use to communicate with the client
     """

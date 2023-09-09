@@ -1,7 +1,7 @@
-from deliver_cbt import CBTTherapist, CBTSession, CBTIOInterface, AsyncCBTIOInterface
+from deliver_cbt import Therapist, CoachingSession, CoachingIOInterface, AsyncCoachingIOInterface
 
 class SessionManager:
-    def __init__(self, frontend: CBTIOInterface):#,async_mode=False):
+    def __init__(self, frontend: CoachingIOInterface):#,async_mode=False):
         self.sessions = {}
         #self.IOInterface = IOInterface 
         self.frontend=frontend# the sessionManager can only handle one kind of front-end. I think that's OK for now.
@@ -9,7 +9,7 @@ class SessionManager:
         
 
     def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CBTSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message)#, therapist)
+        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message)#, therapist)
         self.sessions[user_id] = session
         return session
 
@@ -46,7 +46,7 @@ class SessionManager:
 #In this design, the `SessionManager` class is responsible for managing sessions, creating new ones, and routing incoming messages to the appropriate session based on the user_id. It also removes sessions that have ended.
 
 class AsyncSessionManager:
-    def __init__(self, frontend: AsyncCBTIOInterface):
+    def __init__(self, frontend: AsyncCoachingIOInterface):
         self.sessions = {}
         #self.IOInterface = IOInterface 
         self.frontend=frontend# the sessionManager can only handle one kind of front-end. I think that's OK for now.
@@ -54,7 +54,7 @@ class AsyncSessionManager:
         
 
     async def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CBTSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True)#, therapist)
+        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True)#, therapist)
         #for the async version, we need to do a distinct to send out the introductory message
         self.sessions[user_id] = session
         await session.respond_to_session_opening_async()
