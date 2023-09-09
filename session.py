@@ -1,15 +1,42 @@
+from chat import ChatConfig
 from deliver_help import Therapist, CoachingSession, CoachingIOInterface, AsyncCoachingIOInterface
+from storage_management import S3BucketManagement, LocalStorageManagement
 
-class SessionManager:
+
+class BaseSessionManager:
+
+    def __init__(self, frontend: CoachingIOInterface):
+                
+        config_settings = ChatConfig.get_config()
+        if ChatConfig.get_config()['IS_HEROKU']=='True':
+            self.storage_manager = S3BucketManagement(
+                config_settings['AWS_ACCESS_KEY_ID'],
+                config_settings['AWS_SECRET_ACCESS_KEY'],
+                config_settings['S3_BUCKET']
+            )
+        else:
+            self.storage_manager = LocalStorageManagement('user_data/')
+
+
+        self.storage_manager = S3BucketManagement(
+                config_settings['AWS_ACCESS_KEY_ID'],
+                config_settings['AWS_SECRET_ACCESS_KEY'],
+                config_settings['S3_BUCKET']
+            )
+
+class SessionManager(BaseSessionManager):
     def __init__(self, frontend: CoachingIOInterface):#,async_mode=False):
         self.sessions = {}
         #self.IOInterface = IOInterface 
         self.frontend=frontend# the sessionManager can only handle one kind of front-end. I think that's OK for now.
         #self.async_mode = async_mode
+
+        super().__init__(frontend)
         
 
     def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message)#, therapist)
+        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message,
+                                  storage_manager=self.storage_manager)#, therapist)
         self.sessions[user_id] = session
         return session
 
@@ -45,16 +72,21 @@ class SessionManager:
 
 #In this design, the `SessionManager` class is responsible for managing sessions, creating new ones, and routing incoming messages to the appropriate session based on the user_id. It also removes sessions that have ended.
 
-class AsyncSessionManager:
+class AsyncSessionManager(BaseSessionManager):
     def __init__(self, frontend: AsyncCoachingIOInterface):
         self.sessions = {}
         #self.IOInterface = IOInterface 
         self.frontend=frontend# the sessionManager can only handle one kind of front-end. I think that's OK for now.
 
+        super().__init__(frontend)
+
         
 
     async def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True)#, therapist)
+        session = CoachingSession(
+            channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True,
+            file_storage_manager=self.storage_manager
+            )#, therapist)
         #for the async version, we need to do a distinct to send out the introductory message
         self.sessions[user_id] = session
         await session.respond_to_session_opening_async()

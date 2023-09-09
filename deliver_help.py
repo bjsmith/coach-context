@@ -13,38 +13,46 @@ import openai
 import time
 
 from chat import CBTTerminal, ChatConfig, CoachingIOInterface, AsyncCoachingIOInterface
+from storage_management import StorageManager,LocalStorageManagement
 
 class CoachingSession:
     """
     manages the connections and the overall session
     """
-    def __init__(self, frontend: CoachingIOInterface, channel_id, user_id, first_message=None, is_async=False):
+    def __init__(self, frontend: CoachingIOInterface, channel_id, user_id, first_message=None, is_async=False, file_storage_manager: StorageManager = None):
         #self.session_id = session_id
         self.channel_id = channel_id
         self.user_id = user_id
         self.notes = []
         
-        self.notes_filepath = "delivercbt_files/notes_" + str(self.user_id) + ".txt"
-        self.snapshot_filepath = "delivercbt_files/snapshot_" + str(self.user_id) + ".json"
+        self.notes_filename = "notes_" + str(self.user_id) + ".txt"
+        self.snapshot_filename = "snapshot_" + str(self.user_id) + ".json"
+        self.notes_filepath = "delivercbt_files/" + self.notes_filename
+        self.snapshot_filepath = "delivercbt_files/" + self.snapshot_filename
         self.frontend = frontend
         self.is_ended= False
         self.interview_count = None
         self.last_message_ts = None
         self.is_async = is_async
 
+        #long-term, we should do the initialization as below serpately from the session
         self.therapist = EABTTherapist(
             user_id,
             get_ai_response_func=self.get_chatcompletion_response#,
             #send_message_func=self.frontend.send_message
             )
         self.initialize_openai_api_connection()
+        if file_storage_manager is None: file_storage_manager = LocalStorageManagement('delivercbt_files/')
+        self.file_storage_manager = file_storage_manager
+
+        #setup
         self.setup_session(first_message)
         
 
 
     def setup_session(self, first_message=None):
 
-        notes = self.get_notes(self.notes_filepath)
+        notes = self.get_notes(self.notes_filename)
         #this also sets the session number.
 
         #check to see if there was a snapshot last session
@@ -52,11 +60,12 @@ class CoachingSession:
         if snapshot_notes is not None:
             #there is an unclosed session state
             session_summary = self.therapist.summarize_session(snapshot_notes)
-            self.save_notes(self.notes_filepath, session_summary)
-            if os.path.exists(self.snapshot_filepath):
-                os.remove(self.snapshot_filepath)
+            self.save_notes(self.notes_filename, session_summary)
+            if self.file_storage_manager.exists(self.snapshot_filename):
+                self.file_storage_manager.remove(self.snapshot_filename)
+                
             # load the therapist's notes again.
-            notes = self.get_notes(self.notes_filepath)
+            notes = self.get_notes(self.notes_filename)
         # start therapist, pass notes
         
         self.therapist.take_instructions(self.get_instructions())
@@ -79,9 +88,9 @@ class CoachingSession:
     def end_session(self):
         self.is_ended = True
         session_summary = self.therapist.summarize_session()
-        self.save_notes(self.notes_filepath, session_summary)
+        self.save_notes(self.notes_filename, session_summary)
         #session is ending properly, we don't need to load the snapshot
-        os.remove(self.snapshot_filepath)
+        self.file_storage_manager.remove(self.snapshot_filename)
         return(None)
 
         
@@ -144,15 +153,21 @@ class CoachingSession:
         #so that we can load it next time
         
         json_to_save = self.therapist.messages
-        with open(self.snapshot_filepath, 'w') as f:
-            json.dump(json_to_save, f)
+
+
+        self.file_storage_manager.save(json.dumps(json_to_save),self.snapshot_filename)
+        # with open(self.snapshot_filename, 'w') as f:
+        #     json.dump(json_to_save, f)
 
     def check_for_snapshot(self):
         #check to see if there was a snapshot last session
         #if there was, load it
-        if os.path.exists(self.snapshot_filepath):
-            with open(self.snapshot_filepath, 'r') as f:
-                snapshot = json.load(f)
+        if self.file_storage_manager.exists(self.snapshot_filename):
+        #if os.path.exists(self.snapshot_filename):
+            # with open(self.snapshot_filename, 'r') as f:
+            #     snapshot = json.load(f)
+            snapshot_raw = self.file_storage_manager.load(self.snapshot_filename)
+            snapshot = json.loads(snapshot_raw)
             #self.therapist.notes = notes
             #we don't want to load them as notes at this stage
             #delete the snapshot file
@@ -173,22 +188,25 @@ class CoachingSession:
         )
         #save the therapist's notes, creating the file if it doesn't exist
         #and appending to it if it does
-        with open(notes_file, 'a') as f:
-            f.write(session_summary)
-
+        self.file_storage_manager.open_append(session_summary, notes_file)
         
 
     def get_notes(self, notes_file):
         #load the therapist's notes
-        if os.path.exists(notes_file):
+        if self.file_storage_manager.exists(notes_file):
             #notes is a text file with just a simple note. read it all in.
-            with open(notes_file, 'r') as f:
-                notes = f.read()
-                #get the number of lines of the file
-                #the number of lines is the number of sessions
-                #notes string is alreayd read out so we just need to count the lines
-                self.interview_count = len(notes.splitlines()) +1
-                #add the number of sessions to the notes
+            notes = self.file_storage_manager.load(notes_file)
+            #count the lines in the notes variable
+            #the number of lines is the number of sessions
+            #notes string is alreayd read out so we just need to count the lines
+            self.interview_count = len(notes.splitlines()) +1
+            # with open(notes_file, 'r') as f:
+            #     notes = f.read()
+            #     #get the number of lines of the file
+            #     #the number of lines is the number of sessions
+            #     #notes string is alreayd read out so we just need to count the lines
+            #     self.interview_count = len(notes.splitlines()) +1
+            #     #add the number of sessions to the notes
                 
                 
                 
@@ -211,8 +229,11 @@ class CoachingSession:
     
     def get_instructions(self):
         instructions_filepath = "delivercbt_files/" + self.therapist.instruction_set_name +".txt"
+
+        #instructions = self.file_storage_manager.load(instructions_filepath)
         with open(instructions_filepath, 'r') as f:
             instructions = f.read()
+
         return(instructions)
     
 
@@ -223,11 +244,11 @@ class CoachingSession:
         Only useful for handling a single client at this point.
         """
         session_in_progress = True
-        notes_filepath = "delivercbt_files/notes_" + str(self.session_id) + ".txt"
+        
 
 
         # load the therapist's notes
-        notes = self.get_notes(notes_filepath)
+        notes = self.get_notes(self.notes_filename)
         # start therapist, pass notes
         
         self.therapist.take_instructions(self.get_instructions())
@@ -258,7 +279,7 @@ class CoachingSession:
             self.frontend.print_output(response)
             # repeat
         # on exit, save notes
-        self.save_notes(notes_filepath)
+        self.save_notes(self.notes_filename)
 
 
 
