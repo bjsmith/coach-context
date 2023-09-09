@@ -373,17 +373,17 @@ class Therapist:
 
 class CBTTherapist(Therapist):
     
-    def __init(self, session_id, get_ai_response_func):
+    def __init__(self, session_id, get_ai_response_func):
         super().__init__(session_id, get_ai_response_func)
         pass
 
 
 class EABTTherapist(Therapist):
 
-    def __init(self, session_id, get_ai_response_func):
+    def __init__(self, session_id, get_ai_response_func):
         super().__init__(session_id, get_ai_response_func)
 
-        self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using emotional attachment behavioral therapy (EABT). I am not equipped to talk with you about other psychological issues but we can practice AEBT, particulalry in an a context of helping you address addictions and unhealthy or undesired habits. Please be aware a summary of this conversation will be recorded for training purposes."
+        self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your addictions and habits using emotional attachment behavioral therapy (EABT). I am not equipped to talk with you about other psychological issues but we can help you address addictions and unhealthy or undesired habits. Please be aware a summary of this conversation will be recorded for training purposes."
         self.instruction_set_name = 'eabt_prompt'
         pass
 

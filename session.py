@@ -1,4 +1,4 @@
-from deliver_cbt import Therapist, CoachingSession, CoachingIOInterface, AsyncCoachingIOInterface
+from deliver_help import Therapist, CoachingSession, CoachingIOInterface, AsyncCoachingIOInterface
 
 class SessionManager:
     def __init__(self, frontend: CoachingIOInterface):#,async_mode=False):
