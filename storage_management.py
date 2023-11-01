@@ -66,6 +66,9 @@ class S3BucketManagement(StorageManager):
         
 
     def _get_s3_object(self):
+        #should add a client age tracker so that if the client is under a certain age (say 1 hour) we don't even bother checking 
+        # if it is active, we just return it
+        #would probably need to be coupled with try/catch statements around other s3 operations, i.e., load, remove, upload
         if self.s3_client is None or not self.is_s3_client_active(self.s3_client):
             self.s3_client = boto3.client('s3',
                             aws_access_key_id=self.access_key,

@@ -1,9 +1,12 @@
 delivercbt_files/config.yml
 delivercbt_files/notes*
 delivercbt_files/snapshot*
+delivercbt_files/alt_
 ngrok
 .DS_Store
 __pycache__/
 setup_server.sh
 .vscode/
 .vscode/*
+coach-context-main-bucket_S3BucketManagement_cache
+coach-context-main-bucket_S3BucketManagement_cache/*

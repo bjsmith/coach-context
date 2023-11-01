@@ -13,6 +13,7 @@ import openai
 import time
 
 from chat import CBTTerminal, ChatConfig, CoachingIOInterface, AsyncCoachingIOInterface
+from dataclasses import dataclass
 from storage_management import StorageManager,LocalStorageManagement
 
 class CoachingSession:
@@ -23,7 +24,7 @@ class CoachingSession:
         #self.session_id = session_id
         self.channel_id = channel_id
         self.user_id = user_id
-        self.notes = []
+        #self.notes = []
         
         self.notes_filename = "notes_" + str(self.user_id) + ".txt"
         self.snapshot_filename = "snapshot_" + str(self.user_id) + ".json"
@@ -31,14 +32,16 @@ class CoachingSession:
         self.snapshot_filepath = "delivercbt_files/" + self.snapshot_filename
         self.frontend = frontend
         self.is_ended= False
-        self.interview_count = None
+        #self.interview_count = None
         self.last_message_ts = None
+        self.session_info = CoachingSessionInfo() #shared information that is available to the CoachingSession and the Therapist
         self.is_async = is_async
 
         #long-term, we should do the initialization as below serpately from the session
         self.therapist = EABTTherapist(
             user_id,
-            get_ai_response_func=self.get_chatcompletion_response#,
+            get_ai_response_func=self.get_chatcompletion_response,
+            session_info = self.session_info
             #send_message_func=self.frontend.send_message
             )
         self.initialize_openai_api_connection()
@@ -53,6 +56,7 @@ class CoachingSession:
     def setup_session(self, first_message=None):
 
         notes = self.get_notes(self.notes_filename)
+        
         #this also sets the session number.
 
         #check to see if there was a snapshot last session
@@ -66,10 +70,13 @@ class CoachingSession:
                 
             # load the therapist's notes again.
             notes = self.get_notes(self.notes_filename)
+
+        self.session_info.notes = notes
         # start therapist, pass notes
         
         self.therapist.take_instructions(self.get_instructions())
         self.therapist.read_notes(notes)
+        
 
         if first_message is not None:
             self.therapist.listen_to_client(first_message)
@@ -79,8 +86,9 @@ class CoachingSession:
             #because the client is already in the channel and has already said something
             # so the first message from the therapist should be the response to the client's message
             # combined with an appropriate introduction.
-            introductory_text = self.therapist.introduce_self()
-            self.frontend.send_message(introductory_text, channel_id=self.channel_id)
+            introductory_text = self.therapist.open_session()
+            if introductory_text != "": #the introductory text may be blank, if instead the therapist gives themselves an instruction to shape the response, rather than sending introductory text.
+                self.frontend.send_message(introductory_text, channel_id=self.channel_id)
             response = self.therapist.respond()
             self.frontend.send_message(message= response, channel_id=self.channel_id)
             self.set_last_message_ts()
@@ -108,8 +116,9 @@ class CoachingSession:
         self.last_message_ts = ts
 
     async def respond_to_session_opening_async(self):
-        introductory_text = self.therapist.introduce_self()
-        await self.frontend.send_message(introductory_text, channel_id=self.channel_id)
+        introductory_text = self.therapist.open_session()
+        if introductory_text != "": #the introductory text may be blank, if instead the therapist gives themselves an instruction to shape the response, rather than sending introductory text.
+            await self.frontend.send_message(introductory_text, channel_id=self.channel_id)
         response = self.therapist.respond()
         await self.frontend.send_message(message= response, channel_id=self.channel_id)
         self.set_last_message_ts()
@@ -183,7 +192,7 @@ class CoachingSession:
         if session_summary is None:
             session_summary = self.therapist.summarize_session()
         session_summary = (
-            "Session " + str(self.interview_count) + ": " + 
+            "Session " + str(self.session_info.interview_count) + ": " + 
             session_summary + "\n"
         )
         #save the therapist's notes, creating the file if it doesn't exist
@@ -199,12 +208,12 @@ class CoachingSession:
             #count the lines in the notes variable
             #the number of lines is the number of sessions
             #notes string is alreayd read out so we just need to count the lines
-            self.interview_count = len(notes.splitlines()) +1
+            self.session_info.interview_count = len(notes.splitlines()) +1
             # with open(notes_file, 'r') as f:
             #     notes = f.read()
             #     #get the number of lines of the file
             #     #the number of lines is the number of sessions
-            #     #notes string is alreayd read out so we just need to count the lines
+            #     #notes string is already read out so we just need to count the lines
             #     self.interview_count = len(notes.splitlines()) +1
             #     #add the number of sessions to the notes
                 
@@ -212,7 +221,9 @@ class CoachingSession:
                 
         else:
             notes = "This is session 1. The therapist has never met the client before."
-            self.interview_count = 1
+            self.session_info.interview_count = 1
+
+        
         return(notes)
 
     def get_chatcompletion_response(self, messages_to_send, model='gpt-4-0314', tokens=150):
@@ -254,7 +265,7 @@ class CoachingSession:
         self.therapist.take_instructions(self.get_instructions())
         self.therapist.read_notes(notes)
 
-        introductory_text = self.therapist.introduce_self()
+        introductory_text = self.therapist.open_session()
         self.frontend.print_output(introductory_text)
     
         while session_in_progress:
@@ -281,6 +292,15 @@ class CoachingSession:
         # on exit, save notes
         self.save_notes(self.notes_filename)
 
+@dataclass
+class CoachingSessionInfo:
+    """
+    Stores various pieces of information about the session.
+    An instantiation is made available to the therapist so that they can access the session info.
+    """
+    
+    interview_count: int = None
+    notes: str = None
 
 
 class Therapist:
@@ -289,16 +309,18 @@ class Therapist:
     """
     
 
-    def __init__(self, session_id, get_ai_response_func):
+    def __init__(self, session_id, get_ai_response_func,session_info: CoachingSessionInfo):
         #this is a set of information you build up before sending for a response
         #self.information_buffer = []
         self.messages = []
         self.get_ai_response = get_ai_response_func
-        self.notes = ""
+        #self.notes = ""
         self.reminder_buffer = []
         self.instruction_set_name = 'alt_prompt'
+        self.session_info = session_info
 
-        self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using cognitive behavioral therapy. I am not equipped to talk with you about other psychological issues but we can talk about overcoming your fears. Please be aware a summary of this conversation will be recorded for training purposes."
+        self.initial_intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your fears and anxieties using cognitive behavioral therapy. I am not equipped to talk with you about other psychological issues but we can talk about overcoming your fears. Please be aware a summary of this conversation will be recorded for training purposes."
+        #self.subsequent_intro_text ="Hello again! Thank you for joining me today."
 
         
         pass
@@ -322,9 +344,14 @@ class Therapist:
 
 
 
-    def introduce_self(self):
+    def open_session(self):
                 # this should be stored externally but this is a quick and dirty way to do it
-        introduction = self.intro_text
+        if self.session_info.interview_count == 1:
+            introduction = self.initial_intro_text
+        else:
+            #introduction = self.subsequent_intro_text
+            introduction = ""
+            self.reminder_buffer.append({"role": "system", "content": "(A new session is beginning. In the first message, the therapist should briefly say hi, thank the client for joining them, and then respond to any substantive opening remarks from the client.)"})
 
         #if client has already said something, then we need to respond to that first.
         if np.any([m['role']=="user" for m in self.messages]):
@@ -334,10 +361,12 @@ class Therapist:
                 "After introducing themselves, the therapist should respond to the client's first statement" + 
                 " and if appropriate, invite the client to tell them a little bit about themselves.)"})
         else:
+            #basically this one runs if the therapist initiates the conversation
             auxillary_intro = "\nBefore we get started, would you like to tell me a bit about yourself?"
             introduction += auxillary_intro
-            
-        self.messages.append({"role": "assistant", "content": introduction})
+
+        if introduction != "":
+            self.messages.append({"role": "assistant", "content": introduction})
 
 
         
@@ -345,7 +374,8 @@ class Therapist:
 
     def read_notes(self, notes):
         #self.information_buffer += "\n" + notes
-        self.notes = notes
+        #self.notes = notes
+        self.session_info.notes = notes
         self.take_instructions("The therapist's notes about previous sessions are as follows:\n" + notes)
 
     def listen_to_client(self, client_input):
@@ -394,15 +424,15 @@ class Therapist:
 
 class CBTTherapist(Therapist):
     
-    def __init__(self, session_id, get_ai_response_func):
-        super().__init__(session_id, get_ai_response_func)
+    def __init__(self, session_id, get_ai_response_func,session_info: CoachingSessionInfo):
+        super().__init__(session_id, get_ai_response_func, session_info)
         pass
 
 
 class EABTTherapist(Therapist):
 
-    def __init__(self, session_id, get_ai_response_func):
-        super().__init__(session_id, get_ai_response_func)
+    def __init__(self, session_id, get_ai_response_func,session_info: CoachingSessionInfo):
+        super().__init__(session_id, get_ai_response_func, session_info)
 
         self.intro_text = "Hello, I'm a virtual therapist. I'm here to help you deal with your addictions and habits using emotional attachment behavioral therapy (EABT). I am not equipped to talk with you about other psychological issues but we can help you address addictions and unhealthy or undesired habits. Please be aware a summary of this conversation will be recorded for training purposes."
         self.instruction_set_name = 'eabt_prompt'
