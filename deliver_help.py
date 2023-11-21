@@ -72,6 +72,7 @@ class CoachingSession:
             notes = self.get_notes(self.notes_filename)
 
         self.session_info.notes = notes
+        self.session_info.self_harm_instructions = self.get_self_harm_instructions()
         # start therapist, pass notes
         
         self.therapist.take_instructions(self.get_instructions())
@@ -225,58 +226,12 @@ class CoachingSession:
 
         
         return(notes)
-    def get_unreplied_user_messages_in_stack(self, messages_to_send):
-        last_messages = []
-        for m in reversed(messages_to_send):
-            if m['role'] == 'user':
-                #this is the last message from the user
-                last_messages.append(m)
-            else:
-                #we have reached the end of the user's messages
-                #so we can stop iterating
-                break
 
-        return last_messages
 
-    
-    def check_for_self_harm_in_latest_messages(self, messages_to_send):
-        #get the last set of messages that are from the user
-        #message_to_send is an array of dictionaries; start from the last item, and check if it is from the user
-        #iterate backward until we get on that doesn't have role:user
-        last_messages = self.get_unreplied_user_messages_in_stack(messages_to_send)
-
-        #get just the text content of these messages
-        last_messages_content = [m['content'] for m in last_messages]
-
-        #get moderation ratings
-        if len(last_messages_content) == 0:
-            #no messages to check
-            return(False)
+    def get_chatcompletion_response(self, messages_to_send, chat_model="gpt-3.5-turbo"):
         
-        results_array = openai.Moderation.create(last_messages_content)
-        self_harm_categories = ['self-harm','self-harm/instructions','self-harm/intent']
-        for n in results_array['results']:
-            for sfc in self_harm_categories: 
-                #if the score is above 1%, then we have a match
-                print(sfc + ": " + str(n['category_scores'][sfc]))
-                if n['category_scores'][sfc]>0.01:
-                    print('possible self harm detected.')
-                    return(True)
         
-        return(False)
 
-
-    def get_chatcompletion_response(self, messages_to_send):
-        chat_model="gpt-3.5-turbo"
-        
-        #before we get a standard response, check for moderation.
-        #we are only going to monitor self-harm at this stage.
-        self_harm_detected = self.check_for_self_harm_in_latest_messages(messages_to_send)
-        if self_harm_detected:
-            #if self harm detected, then we need to append an instruction to the bot to respond with a self harm warning with very specific information.
-            self.therapist.take_instructions(self.get_self_harm_instructions())
-            #use the latest model in order to ensure that the self harm warning is as accurate as possible
-            chat_model= 'gpt-4'
 
         api_response = openai.ChatCompletion.create(
             model=chat_model,
@@ -360,6 +315,7 @@ class CoachingSessionInfo:
     
     interview_count: int = None
     notes: str = None
+    self_harm_instructions: str = None
 
 
 class Therapist:
@@ -441,12 +397,65 @@ class Therapist:
         #self.information_buffer += "\n Client: " + client_input
         self.messages.append({"role": "user", "content": client_input})
 
+
+    def get_unreplied_user_messages_in_stack(self, messages_to_send):
+        last_messages = []
+        for m in reversed(messages_to_send):
+            if m['role'] == 'user':
+                #this is the last message from the user
+                last_messages.append(m)
+            else:
+                #we have reached the end of the user's messages
+                #so we can stop iterating
+                break
+
+        return last_messages
+
+    
+    def check_for_self_harm_in_latest_messages(self):
+        #get the last set of messages that are from the user
+        #message_to_send is an array of dictionaries; start from the last item, and check if it is from the user
+        #iterate backward until we get on that doesn't have role:user
+        last_messages = self.get_unreplied_user_messages_in_stack(self.messages)
+
+        #get just the text content of these messages
+        last_messages_content = [m['content'] for m in last_messages]
+
+        #get moderation ratings
+        if len(last_messages_content) == 0:
+            #no messages to check
+            return(False)
+        
+        results_array = openai.Moderation.create(last_messages_content)
+        self_harm_categories = ['self-harm','self-harm/instructions','self-harm/intent']
+        for n in results_array['results']:
+            for sfc in self_harm_categories: 
+                #if the score is above 1%, then we have a match
+                print(sfc + ": " + str(n['category_scores'][sfc]))
+                if n['category_scores'][sfc]>0.01:
+                    print('possible self harm detected.')
+                    return(True)
+        
+        return(False)
+
     def respond(self):
+
         # send the information buffer to the AI and get a response
         if len(self.reminder_buffer) > 0:
             self.messages = self.messages + self.reminder_buffer
             self.reminder_buffer = []
-        response = self.get_ai_response(self.messages)
+
+        chat_model="gpt-3.5-turbo"
+        #before we get a standard response, check for moderation.
+        #we are only going to monitor self-harm at this stage.
+        self_harm_detected = self.check_for_self_harm_in_latest_messages()
+        if self_harm_detected:
+            #if self harm detected, then we need to append an instruction to the bot to respond with a self harm warning with very specific information.
+            self.take_instructions(self.session_info.self_harm_instructions)
+            #use the latest model in order to ensure that the self harm warning is as accurate as possible
+            chat_model= 'gpt-4'
+
+        response = self.get_ai_response(self.messages, chat_model = chat_model)
         self.messages.append({"role": "assistant", "content": response})
         # clear the information buffer
         #self.information_buffer = []
