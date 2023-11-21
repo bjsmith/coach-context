@@ -1,1 +1,1 @@
-worker: python telegram_connector_app.py
+worker: python run_coachrecovery.py
