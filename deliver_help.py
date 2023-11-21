@@ -117,12 +117,15 @@ class CoachingSession:
         self.last_message_ts = ts
 
     async def respond_to_session_opening_async(self):
+        await self.frontend.message_admin("Session opened for " + str(self.user_id) + " in channel " + str(self.channel_id))
         introductory_text = self.therapist.open_session()
         if introductory_text != "": #the introductory text may be blank, if instead the therapist gives themselves an instruction to shape the response, rather than sending introductory text.
             await self.frontend.send_message(introductory_text, channel_id=self.channel_id)
         response = self.therapist.respond()
         await self.frontend.send_message(message= response, channel_id=self.channel_id)
         self.set_last_message_ts()
+
+        
 
 
     async def handle_message_async(self,message,ts):

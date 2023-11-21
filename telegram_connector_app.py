@@ -14,15 +14,6 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from telegram.ext import MessageHandler, filters
 
-# OK SO this is not going to work
-# because we've designed it asynchronusly
-# it's not compatible with running SessionManager
-# which is designed to be synchronous
-# we'd have to rewrite SessionManager to be async
-# I don't know how to do that
-# possibly we can use the deliver_cbt, but we can't use the SessionManager as it is.
-
-
 class TelegramConnectorApp:
 
 
@@ -95,9 +86,9 @@ class TelegramConnectorApp:
         #message = {}
         #current_ts =0
         text = message['text']
-        user_id = update.effective_user.id
+        user_id = update.effective_user.username
 
-        channel_id = user_id # this is different in slack, but just using the username here.
+        channel_id = update.effective_user.id # this is different in slack, but just using the username here.
         ts = message['date'].timestamp()
         print("receiving message from user " + str(user_id) + " (" + str(ts) + "): " + text)
 
@@ -135,6 +126,13 @@ class TelegramIO(CoachingIOInterface):
 
     def indicate_response_coming(self):
         pass
+
+    async def message_admin(self, message):
+        admins = ChatConfig.get_config()['telegram_admin_ids']
+        for admin in admins:
+            await self.send_message_callback(admin, message)
+
+    
 
 if __name__ == '__main__':
     # my_flask_app =TelegramConnectorApp()

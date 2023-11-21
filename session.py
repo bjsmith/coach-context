@@ -32,6 +32,7 @@ class SessionManager(BaseSessionManager):
         #self.async_mode = async_mode
 
         super().__init__(frontend)
+        raise Exception("This class is deprecated. I haven't tested it in a while and don't know if it works. Use AsyncSessionManager instead")
         
 
     def create_session(self, channel_id, user_id, first_message=None):#, therapist):
@@ -89,6 +90,7 @@ class AsyncSessionManager(BaseSessionManager):
             )#, therapist)
         #for the async version, we need to do a distinct to send out the introductory message
         self.sessions[user_id] = session
+        
         await session.respond_to_session_opening_async()
         
         return session

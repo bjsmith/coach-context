@@ -46,6 +46,9 @@ class CoachingIOInterface:
     
     def indicate_response_coming(self):
         raise NotImplementedError
+    
+    def message_admin(self):
+        raise NotImplementedError
 
 class AsyncCoachingIOInterface:
     """
@@ -58,6 +61,9 @@ class AsyncCoachingIOInterface:
         raise NotImplementedError
     
     def indicate_response_coming(self):
+        raise NotImplementedError
+    
+    def message_admin(self):
         raise NotImplementedError
 
 
