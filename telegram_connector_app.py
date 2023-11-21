@@ -26,13 +26,14 @@ from telegram.ext import MessageHandler, filters
 class TelegramConnectorApp:
 
 
-    def __init__(self):
+    def __init__(self, telegram_token=None):
         # logging.basicConfig(
         # format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         # level=logging.INFO
         # )
         
-        telegram_token = ChatConfig.get_config()['telegrambottoken']
+        if telegram_token is None:
+            telegram_token = ChatConfig.get_config()['telegrambottoken']
         application = ApplicationBuilder().token(telegram_token).build()
         # self.client = telegram.Bot(token=ChatConfig.get_config()['telegrambottoken'])
 

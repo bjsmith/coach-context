@@ -112,7 +112,8 @@ class AsyncSessionManager(BaseSessionManager):
             
              
         else:
-            if float(ts) - session.last_message_ts > timeout:
+            #this shouldn't ever be none but in some cases if the user has quickly sent a message before the session has been created, it might be
+            if session.last_message_ts is None or (float(ts) - session.last_message_ts > timeout):
                 self.close_session(user_id)
                 #try again with a new session
                 await self.handle_incoming_message(channel_id, user_id, message, ts)

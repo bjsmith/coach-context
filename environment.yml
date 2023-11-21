@@ -1,4 +1,4 @@
-name: openai
+name: openai_chatbot
 channels:
   - conda-forge
   - https://conda.anaconda.org/erik

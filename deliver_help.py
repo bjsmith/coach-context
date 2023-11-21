@@ -225,28 +225,87 @@ class CoachingSession:
 
         
         return(notes)
+    def get_unreplied_user_messages_in_stack(self, messages_to_send):
+        last_messages = []
+        for m in reversed(messages_to_send):
+            if m['role'] == 'user':
+                #this is the last message from the user
+                last_messages.append(m)
+            else:
+                #we have reached the end of the user's messages
+                #so we can stop iterating
+                break
 
-    def get_chatcompletion_response(self, messages_to_send, model='gpt-4-0314', tokens=150):
+        return last_messages
+
+    
+    def check_for_self_harm_in_latest_messages(self, messages_to_send):
+        #get the last set of messages that are from the user
+        #message_to_send is an array of dictionaries; start from the last item, and check if it is from the user
+        #iterate backward until we get on that doesn't have role:user
+        last_messages = self.get_unreplied_user_messages_in_stack(messages_to_send)
+
+        #get just the text content of these messages
+        last_messages_content = [m['content'] for m in last_messages]
+
+        #get moderation ratings
+        if len(last_messages_content) == 0:
+            #no messages to check
+            return(False)
+        
+        results_array = openai.Moderation.create(last_messages_content)
+        self_harm_categories = ['self-harm','self-harm/instructions','self-harm/intent']
+        for n in results_array['results']:
+            for sfc in self_harm_categories: 
+                #if the score is above 1%, then we have a match
+                print(sfc + ": " + str(n['category_scores'][sfc]))
+                if n['category_scores'][sfc]>0.01:
+                    print('possible self harm detected.')
+                    return(True)
+        
+        return(False)
+
+
+    def get_chatcompletion_response(self, messages_to_send):
+        chat_model="gpt-3.5-turbo"
+        
+        #before we get a standard response, check for moderation.
+        #we are only going to monitor self-harm at this stage.
+        self_harm_detected = self.check_for_self_harm_in_latest_messages(messages_to_send)
+        if self_harm_detected:
+            #if self harm detected, then we need to append an instruction to the bot to respond with a self harm warning with very specific information.
+            self.therapist.take_instructions(self.get_self_harm_instructions())
+            #use the latest model in order to ensure that the self harm warning is as accurate as possible
+            chat_model= 'gpt-4'
+
         api_response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=chat_model,
             messages=messages_to_send
             )
         
         #process the response using json parsing, and extract the content
         #of the first choice
 
+        
+
         text_response = api_response.choices[0].message['content']
         return text_response
     
     def get_instructions(self):
-        instructions_filepath = "delivercbt_files/" + self.therapist.instruction_set_name +".txt"
+        return(self.get_prompt_from_flatfile(self.therapist.instruction_set_name))
 
-        #instructions = self.file_storage_manager.load(instructions_filepath)
+    def get_self_harm_instructions(self):
+        return(self.get_prompt_from_flatfile('anti_self_harm_prompt'))
+
+
+    def get_prompt_from_flatfile(self, file_label):
+
+        instructions_filepath = "delivercbt_files/" + file_label +".txt"
+
         with open(instructions_filepath, 'r') as f:
             instructions = f.read()
 
         return(instructions)
-    
 
     
     def run(self):
