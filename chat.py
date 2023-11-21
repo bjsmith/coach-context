@@ -6,6 +6,7 @@ from socket import gethostname # do better
 #from flask import Flask
 from slack_bolt import App
 import os
+import json
 
 class ChatConfig:
 
@@ -21,6 +22,13 @@ class ChatConfig:
                 all_environ = dict(os.environ)
                 #now get the keys that start with "COACHCONTEXT_"
                 coachcontext_environ = {k.replace("COACHCONTEXT_",""):v for k,v in all_environ.items() if k.startswith("COACHCONTEXT_")}
+                #attempt to convert each value to json, if it fails, just use the string
+                for k,v in coachcontext_environ.items():
+                    try:
+                        coachcontext_environ[k] = json.loads(v)
+                    except ValueError:
+                        pass
+                
                 ChatConfig.config = coachcontext_environ
                 return ChatConfig.config
 
