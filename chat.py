@@ -55,6 +55,9 @@ class CoachingIOInterface:
     def indicate_response_coming(self):
         raise NotImplementedError
     
+    def get_user_first_name(self):
+        raise NotImplementedError
+    
     def message_admin(self):
         raise NotImplementedError
 

@@ -92,16 +92,15 @@ class TelegramConnectorApp:
         ts = message['date'].timestamp()
         print("receiving message from user " + str(user_id) + " (" + str(ts) + ")")
 
-        #temporary measure to avoid processing bounced events
-        #this can occur during debugging.
-        # if ts<float(current_ts-30):
-        #     print('ignoring old event')
-        #     return jsonify({'status': 'ok'})
+        user_info = {
+            'first_name': update.effective_user.first_name,
+            'language_code': update.effective_user.language_code
+        }
 
 
         # user_id = event.get("user_id")
         # message = event.get("message")
-        await self.session_manager.handle_incoming_message(channel_id, user_id, text, ts=ts)
+        await self.session_manager.handle_incoming_message(channel_id, user_id, text, user_info = user_info, ts=ts)
         #self.send_response_to_slack(response)
 
         

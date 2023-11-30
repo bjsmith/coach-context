@@ -83,10 +83,14 @@ class AsyncSessionManager(BaseSessionManager):
 
         
 
-    async def create_session(self, channel_id, user_id, first_message=None):#, therapist):
+    async def create_session(self, channel_id, user_id, first_message=None,
+                             user_info = {}):#, therapist):
         session = CoachingSession(
-            channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message, is_async=True,
-            file_storage_manager=self.storage_manager
+            channel_id = channel_id, user_id = user_id, frontend=self.frontend, 
+            first_message=first_message, is_async=True,
+            file_storage_manager=self.storage_manager,
+            user_info=user_info
+
             )#, therapist)
         #for the async version, we need to do a distinct to send out the introductory message
         self.sessions[user_id] = session
@@ -103,13 +107,13 @@ class AsyncSessionManager(BaseSessionManager):
             self.sessions[user_id].end_session()
             del self.sessions[user_id]
 
-    async def handle_incoming_message(self, channel_id, user_id, message,ts):
+    async def handle_incoming_message(self, channel_id, user_id, message, ts, user_info = {}):
         session = self.get_session(user_id)
         timeout = 8 * 60 * 60  # 8 hours in seconds
 
         if not session:
             #therapist = CBTTherapist()
-            session = await self.create_session(channel_id, user_id, first_message=message)
+            session = await self.create_session(channel_id, user_id, first_message=message, user_info=user_info)
             #response = ""
             
              

@@ -4,6 +4,7 @@
 # can pick up where they left off.
 # the app should avoid counseling about serious issues that require a human therapist
 # this is quite important.
+import datetime
 import os
 import pandas as pd
 import json
@@ -20,7 +21,10 @@ class CoachingSession:
     """
     manages the connections and the overall session
     """
-    def __init__(self, frontend: CoachingIOInterface, channel_id, user_id, first_message=None, is_async=False, file_storage_manager: StorageManager = None):
+    def __init__(self, frontend: CoachingIOInterface, channel_id, user_id,
+                 first_message=None, is_async=False, file_storage_manager: StorageManager = None,
+                 user_info = {}
+                 ):
         #self.session_id = session_id
         self.channel_id = channel_id
         self.user_id = user_id
@@ -36,6 +40,7 @@ class CoachingSession:
         self.last_message_ts = None
         self.session_info = CoachingSessionInfo() #shared information that is available to the CoachingSession and the Therapist
         self.is_async = is_async
+        self.session_info.user_first_name = user_info['first_name']
 
         #long-term, we should do the initialization as below serpately from the session
         self.therapist = EABTTherapist(
@@ -319,6 +324,7 @@ class CoachingSessionInfo:
     interview_count: int = None
     notes: str = None
     self_harm_instructions: str = None
+    user_first_name: str = None
 
 
 class Therapist:
@@ -343,9 +349,18 @@ class Therapist:
         
         pass
 
+    #@property
+    def get_messages_w_context(self):
+        messages_w_context = self.messages.copy()
+        messages_w_context.append(self.get_context_for_ai())
+        return(messages_w_context)
+
     def take_instructions(self, instructions):
-        self.messages.append({"role": "system", "content": instructions})
+        self.messages.append(self.generate_instruction_json(instructions))
         pass
+
+    def generate_instruction_json(self, instruction):
+        return({"role": "system", "content": instruction})
 
 
     def self_monitor(self, therapist_talk):
@@ -448,6 +463,15 @@ class Therapist:
                     return(True)
         
         return(False)
+    
+    def get_context_for_ai(self):
+        #let's start with the current time and the user's name
+        weekday = datetime.datetime.today().strftime("%A")
+        context_note = self.generate_instruction_json(
+            # do the date time with an AM/PM indicator and the weekday
+            "The current time is " + datetime.datetime.now().strftime("%H:%M %p") + " on " + weekday + "." + 
+            " The client's name is " + self.session_info.user_first_name + ".")
+        return(context_note)
 
     def respond(self):
 
@@ -468,12 +492,12 @@ class Therapist:
             #use the latest model in order to ensure that the self harm warning is as accurate as possible
             chat_model= 'gpt-4'
 
-        response = self.get_ai_response(self.messages, chat_model = chat_model)
+        response = self.get_ai_response(self.get_messages_w_context(), chat_model = chat_model)
         #now apply the self-monitoring function; it will get a new response if necessary.
         try_again = self.self_monitor(response)
 
         if try_again:
-            response = self.get_ai_response(self.messages, chat_model = chat_model)
+            response = self.get_ai_response(self.get_messages_w_context(), chat_model = chat_model)
             
             # in the future this will need to be more sophisticated
             # to take into account multiple rounds of revision and reminders
