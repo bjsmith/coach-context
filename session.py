@@ -18,11 +18,11 @@ class BaseSessionManager:
             self.storage_manager = LocalStorageManagement('user_data/')
 
 
-        self.storage_manager = S3BucketManagement(
-                config_settings['AWS_ACCESS_KEY_ID'],
-                config_settings['AWS_SECRET_ACCESS_KEY'],
-                config_settings['S3_BUCKET']
-            )
+        # self.storage_manager = S3BucketManagement(
+        #         config_settings['AWS_ACCESS_KEY_ID'],
+        #         config_settings['AWS_SECRET_ACCESS_KEY'],
+        #         config_settings['S3_BUCKET']
+        #     )
 
 class SessionManager(BaseSessionManager):
     def __init__(self, frontend: CoachingIOInterface):#,async_mode=False):

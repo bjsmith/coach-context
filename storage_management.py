@@ -36,6 +36,7 @@ class LocalStorageManagement(StorageManager):
     
     def __init__(self, local_path):
         self.local_path = local_path
+        print("using local storage management only")
         
 
 
@@ -55,6 +56,8 @@ class S3BucketManagement(StorageManager):
 
         if not os.path.exists(self.local_append_path):
             os.makedirs(self.local_append_path)
+
+        print("using s3 bucket management")
 
 
     def is_s3_client_active(self, s3_client):

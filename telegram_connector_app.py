@@ -59,7 +59,7 @@ class TelegramConnectorApp:
             #context.bot.send_message(chat_id=update.effective_chat.id, text="alt-echo: " + update.message.text)
             #print(f"Message sent: {response['ts']} - {text}")
             await self.app.bot.send_message(chat_id=channel_id, text=text)
-            print(f"Message sent: {text}")
+            #print(f"Message sent: {text}")
         except Exception as e:
             # In case of errors, print the error message
             print(f"Error sending message: {e}")
