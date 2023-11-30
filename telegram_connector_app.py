@@ -90,7 +90,7 @@ class TelegramConnectorApp:
 
         channel_id = update.effective_user.id # this is different in slack, but just using the username here.
         ts = message['date'].timestamp()
-        print("receiving message from user " + str(user_id) + " (" + str(ts) + "): " + text)
+        print("receiving message from user " + str(user_id) + " (" + str(ts) + ")")
 
         #temporary measure to avoid processing bounced events
         #this can occur during debugging.

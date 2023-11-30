@@ -352,11 +352,19 @@ class Therapist:
         """
         this function is designed to monitor what the therapist is saying.
         If it needs to be corrected, it is designed to correct the therapist.
+        Returns a boolean value indicating if a correction was made.
         """
         #count the number of words in "therapist_talk"
         #if the number of words is more than 100, they're monologuing too much.
         if len(therapist_talk.split()) > 100:
-            self.reminder_buffer.append({"role": "system", "content": "(The therapist is talking too much. The therapist should ask more questions, and keep each reply to 100 words or less.)"})
+            print("reminded therapist to keep content short.")
+            #self.reminder_buffer.append({"role": "system", "content": "(The therapist is talking too much. The therapist should ask more questions, and keep each reply to 100 words or less.)"})
+            self.reminder_buffer.append({"role": "system", "content": "(Remember to keep each reply to 100 words or less.)"})
+            return False
+        
+        return True
+
+
 
         
 
@@ -448,7 +456,9 @@ class Therapist:
             self.messages = self.messages + self.reminder_buffer
             self.reminder_buffer = []
 
-        chat_model="gpt-3.5-turbo"
+        #chat_model="gpt-3.5-turbo"
+        #chat_model = "gpt-3.5-turbo-1106"
+        chat_model= 'gpt-4'
         #before we get a standard response, check for moderation.
         #we are only going to monitor self-harm at this stage.
         self_harm_detected = self.check_for_self_harm_in_latest_messages()
@@ -459,6 +469,15 @@ class Therapist:
             chat_model= 'gpt-4'
 
         response = self.get_ai_response(self.messages, chat_model = chat_model)
+        #now apply the self-monitoring function; it will get a new response if necessary.
+        try_again = self.self_monitor(response)
+
+        if try_again:
+            response = self.get_ai_response(self.messages, chat_model = chat_model)
+            
+            # in the future this will need to be more sophisticated
+            # to take into account multiple rounds of revision and reminders
+
         self.messages.append({"role": "assistant", "content": response})
         # clear the information buffer
         #self.information_buffer = []
