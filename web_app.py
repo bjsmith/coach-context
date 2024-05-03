@@ -18,3 +18,5 @@ def get_Chat_response(text):
     return text[::-1] + " is the reverse of the input"
     #return text +" is the reverse of the input"
 
+# if __name__=="__main__":
+#     wapp.run()
