@@ -482,7 +482,7 @@ class Therapist:
 
         #chat_model="gpt-3.5-turbo"
         #chat_model = "gpt-3.5-turbo-1106"
-        chat_model= 'gpt-4'
+        chat_model= 'gpt-4-1106-preview'
         #before we get a standard response, check for moderation.
         #we are only going to monitor self-harm at this stage.
         self_harm_detected = self.check_for_self_harm_in_latest_messages()

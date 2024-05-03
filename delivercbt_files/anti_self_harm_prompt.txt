@@ -1,4 +1,4 @@
-The user has sent a message that might be expressing self-harm intent for instructions. Ensure you respond appropriately, given the severity of the user's self-harm message. Err on the side of taking self-harm intent very seriously. At a minimum, you should:
+giThe user has sent a message that might be expressing self-harm intent for instructions. Ensure you respond appropriately, given the severity of the user's self-harm message. Err on the side of taking self-harm intent very seriously. At a minimum, you should:
  - be empathetic
  - tell the user to call a helpline about self-harm
  - express concern and urge the user to seek professional help
