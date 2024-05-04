@@ -9,7 +9,7 @@ from session import SessionManager
 #other
 import time
 wapp = Flask(__name__)
-#wapp.config['SECRET KEY'] = ChatConfig.get_config()['flask_secret_key']
+wapp.config['SECRET KEY'] = ChatConfig.get_config()['flask_secret']
 socketio = SocketIO(wapp)
 
 @wapp.route('/')
@@ -22,6 +22,11 @@ def index():
 #     identity = request.form["identity"]
 #     input = msg
 #     return get_Chat_response(input)
+@socketio.on('open')
+def handle_open(data):
+    print("connection opened")
+    emit('response', "connection opened",to=request.sid)
+
 
 
 @socketio.on('message')
