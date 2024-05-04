@@ -1,2 +1,2 @@
 worker: python run_coachrecovery.py
-web: gunicorn web_app:wapp
+web: gunicorn --worker-class eventlet -w 1 web_app:wapp
