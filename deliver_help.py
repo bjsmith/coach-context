@@ -40,7 +40,11 @@ class CoachingSession:
         self.last_message_ts = None
         self.session_info = CoachingSessionInfo() #shared information that is available to the CoachingSession and the Therapist
         self.is_async = is_async
-        self.session_info.user_first_name = user_info['first_name']
+        
+        if 'first_name' in user_info:
+            self.session_info.user_first_name = user_info['first_name']
+        else:
+            self.session_info.user_first_name = None
 
         #long-term, we should do the initialization as below serpately from the session
         self.therapist = EABTTherapist(
@@ -55,7 +59,7 @@ class CoachingSession:
 
         #setup
         self.setup_session(first_message)
-        
+
 
 
     def setup_session(self, first_message=None):
@@ -467,11 +471,14 @@ class Therapist:
     def get_context_for_ai(self):
         #let's start with the current time and the user's name
         weekday = datetime.datetime.today().strftime("%A")
-        context_note = self.generate_instruction_json(
+        context_note_text = "The current time is " + datetime.datetime.now().strftime("%H:%M %p") + " on " + weekday + "."
+        if self.session_info.user_first_name is not None:
+            context_note_text += " The client's name is " + self.session_info.user_first_name + "."
+        context_note_json = self.generate_instruction_json(
             # do the date time with an AM/PM indicator and the weekday
-            "The current time is " + datetime.datetime.now().strftime("%H:%M %p") + " on " + weekday + "." + 
-            " The client's name is " + self.session_info.user_first_name + ".")
-        return(context_note)
+            context_note_text
+            )
+        return(context_note_json)
 
     def respond(self):
 

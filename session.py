@@ -45,7 +45,20 @@ class SessionManager(BaseSessionManager):
         self.sessions[user_id] = session
         return session
 
-    def get_session(self, user_id):
+    def get_session(self, user_id, channel_id=None):
+        # if channel_id is passed, then only return the session if both the user_id and channel_id match
+        if channel_id is None:
+            return self.sessions.get(user_id)
+        else:
+            session = self.sessions.get(user_id)
+            if session and session.channel_id == channel_id:
+                return session
+            else:
+                return None
+            
+    
+    def get_matching_session(self, user_id, channel_id):
+
         return self.sessions.get(user_id)
 
     def close_session(self, user_id):
@@ -54,7 +67,7 @@ class SessionManager(BaseSessionManager):
             del self.sessions[user_id]
 
     def handle_incoming_message(self, channel_id, user_id, message, ts, user_info = {}):
-        session = self.get_session(user_id)
+        session = self.get_session(user_id, channel_id=channel_id)
         timeout = 8 * 60 * 60  # 8 hours in seconds
 
         if not session:
@@ -62,6 +75,7 @@ class SessionManager(BaseSessionManager):
             session = self.create_session(channel_id, user_id, first_message=message, user_info=user_info)
             #response = ""
         else:
+            
             #this shouldn't ever be none but in some cases if the user has quickly sent a message before the session has been created, it might be
             if session.last_message_ts is None or (float(ts) - session.last_message_ts > timeout):
                 self.close_session(user_id)
