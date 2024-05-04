@@ -110,4 +110,5 @@ session_manager = SessionManager(io)
 
 
 if __name__ == '__main__':
-    wapp.run(debug=True)
+    #wapp.run(debug=True)
+    socketio.run(wapp,debug=True)
