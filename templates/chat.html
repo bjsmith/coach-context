@@ -65,7 +65,8 @@
 				$(document).ready(function(){
 					//set up the socket
 					//const socket = io();
-					const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+					const connect_path = (location.protocol + '//' + document.domain + ':' + location.port).replace(/^http/, 'ws');
+					const socket = io.connect(connect_path)
 					//generate a random identity
 					//const user_identity = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 					//write the code for message submission
