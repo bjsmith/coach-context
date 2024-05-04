@@ -93,6 +93,7 @@ class WebIO(CoachingIOInterface):
         pass
 
     def message_admin(self, message):
+        pass
         admins = ChatConfig.get_config()['telegram_admin_ids']
         for admin in admins:
             self.send_message_callback(admin, message)
