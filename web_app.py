@@ -59,7 +59,7 @@ def handle_msg(data):
 
         #self.send_message(channel_id, f"response")
 
-        return ("received your message. But I don't know how to respond yet.")
+        #return ("received your message. But I don't know how to respond yet.")
 
 
         #return jsonify({'status': 'ok'})
