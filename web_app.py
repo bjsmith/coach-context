@@ -9,6 +9,7 @@ from session import SessionManager
 #other
 import time
 wapp = Flask(__name__)
+#wapp.config['SECRET KEY'] = ChatConfig.get_config()['flask_secret_key']
 socketio = SocketIO(wapp)
 
 @wapp.route('/')

@@ -42,9 +42,10 @@
 				</div>
 			</div>
         </div>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 		<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 		<script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		
 
         <script>
 				function createMsgBobble(text,str_time,isUser){
@@ -63,9 +64,10 @@
 				}
 				$(document).ready(function(){
 					//set up the socket
-					const socket = io();
+					//const socket = io();
+					const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
 					//generate a random identity
-					const user_identity = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+					//const user_identity = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 					//write the code for message submission
 					$("#messageArea").on("submit", function(event){
 						const str_time = getStr_time();
