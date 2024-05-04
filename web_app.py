@@ -22,9 +22,9 @@ def index():
 #     identity = request.form["identity"]
 #     input = msg
 #     return get_Chat_response(input)
-@socketio.on('open')
+@socketio.on('connection')
 def handle_open(data):
-    print("connection opened")
+    print("connection from user opened")
     emit('response', "connection opened",to=request.sid)
 
 
