@@ -12,6 +12,7 @@ socketio = SocketIO(wapp)
 
 @wapp.route('/')
 def index():
+    print("loading app initially.")
     return render_template('chat.html')
 
 @socketio.on('connection')
