@@ -1,8 +1,12 @@
 #front-end
-if __name__ == '__main__':
+print(__name__)
+if __name__ != '__main__':
+    print("using eventlet")
     #workaround--I only want to use eventlet on the server
     import eventlet
     eventlet.monkey_patch()
+else:
+    print("not using eventlet")
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 
@@ -114,5 +118,5 @@ session_manager = SessionManager(io)
 
 
 if __name__ == '__main__':
-    wapp.run(debug=True)
-    #socketio.run(wapp,debug=True,port=5006)
+    #wapp.run(debug=True,port=5007)
+    socketio.run(wapp,debug=True,port=5001)
