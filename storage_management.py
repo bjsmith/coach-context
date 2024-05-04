@@ -14,7 +14,7 @@ class StorageManager:
         return True
     
     def open_append(self, append_contents, filename):
-        with open(self.local_path + filename, 'a') as f:
+        with open(self.local_path + filename, 'a+') as f:
             f.write(append_contents)
     
     def exists(self, filename):

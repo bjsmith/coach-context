@@ -1,6 +1,7 @@
 <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
 
 <!DOCTYPE html>
 <html>
@@ -47,9 +48,20 @@
 			</div>
         </div>
         <script>
+				function createMsgBobble(text,str_time,isUser){
+					if (isUser){
+						'<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">' + text + '<span class="msg_time_send">'+ str_time + 
+    '</span></div><div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div></div>';
+					}else{
+						'<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="https://i.ibb.co/fSNP7Rz/icons8-chatgpt-512.png" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">' + text + '<span class="msg_time">' + str_time + '</span></div></div>';
+					}
+				}
 				$(document).ready(function(){
+					//set up the socket
+					const socket = io();
 					//generate a random identity
 					const user_identity = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+					//write the code for message submission
 					$("#messageArea").on("submit", function(event){
 						const date = new Date();
 						const hour = date.getHours();
@@ -58,28 +70,30 @@
 
 						var rawText = $("#text").val();
 
-						var userHtml = '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">' + rawText + '<span class="msg_time_send">'+ str_time + 
-    '</span></div><div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div></div>';
+						var userHtml = "<div>hello</div>";//createMsgBobble(rawText,str_time,true);
+
+
+                		event.preventDefault();
+                
+                		socket.emit('message', rawText);
 
 						$("#text").val("");
 
 						$("#messageFormeight").append(userHtml);
-						$.ajax({
-							data: {
-								"msg": rawText,
-								"identity":user_identity
-							},
-							type: "POST",
-							url: "/get"
-							}
-						).done(function(data){
-							var botHtml = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="https://i.ibb.co/fSNP7Rz/icons8-chatgpt-512.png" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">' + data + '<span class="msg_time">' + str_time + '</span></div></div>';
-							$("#messageFormeight").append($.parseHTML(botHtml));
-						});
-						event.preventDefault();
-
-
+						return(false);
 					});
+						//event.preventDefault();
+
+
+					//message receipt
+
+					// socket.on('response', function (msg) {
+					// 	const messageElement = $(createMsgBobble(msg,str_time,false));
+					// 	$('#messageFormeight').append(messageElement);
+					// });
+
+
+
 				});
 		</script>
     </body>

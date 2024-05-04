@@ -32,12 +32,16 @@ class SessionManager(BaseSessionManager):
         #self.async_mode = async_mode
 
         super().__init__(frontend)
-        raise Exception("This class is deprecated. I haven't tested it in a while and don't know if it works. Use AsyncSessionManager instead")
         
 
-    def create_session(self, channel_id, user_id, first_message=None):#, therapist):
-        session = CoachingSession(channel_id = channel_id, user_id = user_id, frontend=self.frontend, first_message=first_message,
-                                  storage_manager=self.storage_manager)#, therapist)
+    def create_session(self, channel_id, user_id, first_message=None, user_info = {}):#, therapist):
+        session = CoachingSession(
+            channel_id = channel_id, user_id = user_id, frontend=self.frontend, 
+            first_message=first_message, is_async=True,
+            file_storage_manager=self.storage_manager,
+            user_info=user_info
+
+            )
         self.sessions[user_id] = session
         return session
 
@@ -49,20 +53,22 @@ class SessionManager(BaseSessionManager):
             self.sessions[user_id].end_session()
             del self.sessions[user_id]
 
-    def handle_incoming_message(self, channel_id, user_id, message,ts):
+    def handle_incoming_message(self, channel_id, user_id, message, ts, user_info = {}):
         session = self.get_session(user_id)
         timeout = 8 * 60 * 60  # 8 hours in seconds
 
         if not session:
             #therapist = CBTTherapist()
-            session = self.create_session(channel_id, user_id, first_message=message)
+            session = self.create_session(channel_id, user_id, first_message=message, user_info=user_info)
             #response = ""
         else:
-            if float(ts) - session.last_message_ts > timeout:
+            #this shouldn't ever be none but in some cases if the user has quickly sent a message before the session has been created, it might be
+            if session.last_message_ts is None or (float(ts) - session.last_message_ts > timeout):
                 self.close_session(user_id)
                 #try again with a new session
                 self.handle_incoming_message(channel_id, user_id, message, ts)
                 return()
+
             response = session.handle_message(message, ts=ts)
             
         if session.is_ended:
@@ -70,7 +76,6 @@ class SessionManager(BaseSessionManager):
             #return(None)
 
         return()
-
 #In this design, the `SessionManager` class is responsible for managing sessions, creating new ones, and routing incoming messages to the appropriate session based on the user_id. It also removes sessions that have ended.
 
 class AsyncSessionManager(BaseSessionManager):
@@ -80,8 +85,6 @@ class AsyncSessionManager(BaseSessionManager):
         self.frontend=frontend# the sessionManager can only handle one kind of front-end. I think that's OK for now.
 
         super().__init__(frontend)
-
-        
 
     async def create_session(self, channel_id, user_id, first_message=None,
                              user_info = {}):#, therapist):
