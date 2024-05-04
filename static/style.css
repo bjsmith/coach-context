@@ -11,7 +11,7 @@ body,html{
 	margin-bottom: auto;
 }
 .card{
-	height: 500px;
+	height: 100vh;
 	border-radius: 15px !important;
 	background-color: rgba(0,0,0,0.4) !important;
 }
@@ -22,6 +22,7 @@ body,html{
 }
 .msg_card_body{
 	overflow-y: auto;
+	height: calc(100vh - 120px);
 }
 .card-header{
 	border-radius: 15px 15px 0 0 !important;
