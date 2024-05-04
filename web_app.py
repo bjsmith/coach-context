@@ -47,7 +47,7 @@ def handle_msg(data):
         }
 
         session_manager.handle_incoming_message(channel_id, user_id, text, user_info = user_info, ts=ts)
-        print(' received a message from a user ({user_id}) {text}')
+        print(f' received a message from a user ({user_id}) {text}')
 
         #self.send_message(channel_id, f"response")
 

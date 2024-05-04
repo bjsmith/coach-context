@@ -37,7 +37,7 @@ class SessionManager(BaseSessionManager):
     def create_session(self, channel_id, user_id, first_message=None, user_info = {}):#, therapist):
         session = CoachingSession(
             channel_id = channel_id, user_id = user_id, frontend=self.frontend, 
-            first_message=first_message, is_async=True,
+            first_message=first_message, is_async=False,
             file_storage_manager=self.storage_manager,
             user_info=user_info
 

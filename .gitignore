@@ -10,3 +10,5 @@ setup_server.sh
 .vscode/*
 coach-context-main-bucket_S3BucketManagement_cache
 coach-context-main-bucket_S3BucketManagement_cache/*
+user_data/
+user_data/*
