@@ -1,6 +1,8 @@
 #front-end
-import eventlet
-eventlet.monkey_patch()
+if __name__ == '__main__':
+    #workaround--I only want to use eventlet on the server
+    import eventlet
+    eventlet.monkey_patch()
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 
@@ -112,5 +114,5 @@ session_manager = SessionManager(io)
 
 
 if __name__ == '__main__':
-    #wapp.run(debug=True)
-    socketio.run(wapp,debug=True)
+    wapp.run(debug=True)
+    #socketio.run(wapp,debug=True,port=5006)

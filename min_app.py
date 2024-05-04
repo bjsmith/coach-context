@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+# import eventlet
+# eventlet.monkey_patch()
 #front-end
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
@@ -46,4 +46,4 @@ def send_message(channel_id,text):
 
 if __name__ == '__main__':
     #wapp.run(debug=True)
-    socketio.run(wapp,debug=True)
+    socketio.run(wapp,debug=True,port=5002)
